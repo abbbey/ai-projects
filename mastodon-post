@@ -5,12 +5,15 @@ import requests
 
 def post_to_mastodon(text, audience):
     # Read config file
-    with open('/home/twelve/.config/mastoposter', 'r') as f:
+    config_file = Path.home() / '.config' / 'mastoposter.json'
+    if not config_file.exists():
+        raise FileNotFoundError('No mastoposter.json found in ~/.config dir')
+    with open(config_file, 'r') as f:
         config = json.load(f)
 
     # Check if all required values exist in config
     auth = config.get('Authentication')
-    if not auth or not auth.get('InstanceUrl') or not auth.get('ApiKey') or not auth.get('ApiSecret'):
+    if not auth or not auth.get('InstanceUrl') or not auth.get('ApiKey'):
         raise ValueError('Invalid Mastodon config file')
 
     # Set up request headers
