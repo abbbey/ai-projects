@@ -5,15 +5,19 @@ import requests
 import time
 import re
 from requests.structures import CaseInsensitiveDict
+from pathlib import Path
 
 def get_local_timeline(last_id=None):
     # Read config file
-    with open('/home/twelve/.config/mastoposter', 'r') as f:
+    config_file = Path.home() / '.config' / 'mastoposter.json'
+    if not config_file.exists():
+        raise FileNotFoundError('No mastoposter.json found in ~/.config dir')
+    with open(config_file, 'r') as f:
         config = json.load(f)
 
     # Check if all required values exist in config
     auth = config.get('Authentication')
-    if not auth or not auth.get('InstanceUrl') or not auth.get('ApiKey') or not auth.get('ApiSecret'):
+    if not auth or not auth.get('InstanceUrl') or not auth.get('ApiKey'):
         raise ValueError('Invalid Mastodon config file')
 
     # Set up request headers
@@ -44,6 +48,11 @@ def display_local_timeline(last_id=None):
         content = re.sub(r'<span[^>]*>|</span>', '', status['content'])
         # Remove <p> and </p> tags
         content = re.sub(r'<p[^>]*>|</p>', '', content)
+        # Strip out <a href> tags
+        content = re.sub(r'<a [^>]*>', '', content)
+        content = re.sub(r'</a>', '', content)
+        # convert <br> to newline
+        content = re.sub(r'<br>', '\n', content)
         print(f'{status["account"]["username"]}: {content}')
 
     # Return ID of last status
