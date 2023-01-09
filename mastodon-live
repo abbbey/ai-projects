@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+import sys
+import json
+import requests
+import time
+import re
+from requests.structures import CaseInsensitiveDict
+
+def get_local_timeline(last_id=None):
+    # Read config file
+    with open('/home/twelve/.config/mastoposter', 'r') as f:
+        config = json.load(f)
+
+    # Check if all required values exist in config
+    auth = config.get('Authentication')
+    if not auth or not auth.get('InstanceUrl') or not auth.get('ApiKey') or not auth.get('ApiSecret'):
+        raise ValueError('Invalid Mastodon config file')
+
+    # Set up request headers
+    headers = CaseInsensitiveDict()
+    headers['Authorization'] = f'Bearer {auth["ApiKey"]}'
+
+    # Set up request parameters
+    params = {}
+    if last_id:
+        params['since_id'] = last_id
+
+    # Send GET request for local timeline
+    r = requests.get(f'{auth["InstanceUrl"]}/api/v1/timelines/public', headers=headers, params=params)
+
+    # Return list of statuses if request was successful
+    if r.status_code == 200:
+        return r.json()
+    else:
+        raise Exception(f'Error getting local timeline: {r.text}')
+
+def display_local_timeline(last_id=None):
+    # Get local timeline
+    statuses = get_local_timeline(last_id)
+
+    # Display each status
+    for status in statuses:
+        # Remove <span> and </span> tags
+        content = re.sub(r'<span[^>]*>|</span>', '', status['content'])
+        # Remove <p> and </p> tags
+        content = re.sub(r'<p[^>]*>|</p>', '', content)
+        print(f'{status["account"]["username"]}: {content}')
+
+    # Return ID of last status
+    return statuses[-1]['id']
+
+def main():
+    last_id = None
+    while True:
+        # Display new statuses and update last_id
+        last_id = display_local_timeline(last_id)
+        time.sleep(1.25)
+
+if __name__ == '__main__':
+    main()
+

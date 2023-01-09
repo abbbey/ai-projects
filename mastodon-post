@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+import sys
+import json
+import requests
+
+def post_to_mastodon(text, audience):
+    # Read config file
+    with open('/home/twelve/.config/mastoposter', 'r') as f:
+        config = json.load(f)
+
+    # Check if all required values exist in config
+    auth = config.get('Authentication')
+    if not auth or not auth.get('InstanceUrl') or not auth.get('ApiKey') or not auth.get('ApiSecret'):
+        raise ValueError('Invalid Mastodon config file')
+
+    # Set up request headers
+    headers = {
+        'Authorization': f'Bearer {auth["ApiKey"]}',
+        'Content-Type': 'application/json'
+    }
+
+    # Set up request payload
+    payload = {
+        'status': text,
+        'visibility': audience
+    }
+
+    # Send POST request
+    r = requests.post(f'{auth["InstanceUrl"]}/api/v1/statuses', headers=headers, json=payload)
+
+    # Raise error if request was not successful
+    if r.status_code != 200:
+        raise Exception(f'Error posting to Mastodon: {r.text}')
+
+def main():
+    # Parse command line arguments
+    text = sys.argv[1]
+    audience = sys.argv[2]
+
+    # Validate audience value
+    if audience not in ['public', 'direct', 'unlisted']:
+        raise ValueError('Invalid audience value')
+
+    # Post to Mastodon
+    post_to_mastodon(text, audience)
+
+if __name__ == '__main__':
+    main()
+
